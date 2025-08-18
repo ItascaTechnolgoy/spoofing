@@ -1,0 +1,13 @@
+FROM mysql:9.0.1
+
+# Create mysql user and set permissions
+RUN groupadd -r mysql && useradd -r -g mysql mysql
+
+VOLUME ["/var/lib/mysql"]
+
+# Copy configuration only
+COPY ./my.cnf /etc/mysql/my.cnf
+RUN chown -R mysql:mysql /var/lib/mysql
+
+# Expose the MySQL port
+EXPOSE 3306

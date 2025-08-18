@@ -1,0 +1,69 @@
+name: Deploy to VPS
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # Use your srv963397 runner instead of ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create application directory
+        run: |
+          sudo mkdir -p /opt/your-app
+          sudo chown runner:runner /opt/your-app
+
+      - name: Copy application files
+        run: |
+          cp -r * /opt/your-app/
+          cd /opt/your-app
+
+      - name: Create required Docker resources
+        run: |
+          # Create external network if it doesn't exist  
+          docker network create external_network_nginx || echo "Network already exists"
+
+      - name: Create .env file with secrets
+        run: |
+          cd /opt/your-app
+          cat > .env << EOF
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER=${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+          EOF
+
+      - name: Stop existing containers
+        run: |
+          cd /opt/your-app
+          docker compose down || echo "No containers to stop"
+
+      - name: Build and start containers
+        run: |
+          cd /opt/your-app
+          docker compose up -d --build
+
+      - name: Clean up secrets
+        run: |
+          cd /opt/your-app
+          rm -f .env
+
+      - name: Verify deployment
+        run: |
+          echo "Checking running containers:"
+          docker ps
+          sleep 15
+          echo "Testing application health:"
+          curl -f http://localhost:8081/actuator/health || curl -f http://localhost:8081/ || echo "Application not responding yet"
+
+      - name: Show container logs
+        run: |
+          cd /opt/your-app
+          echo "=== Server Logs ==="
+          docker compose logs --tail=20 server
+          echo "=== Database Logs ==="
+          docker compose logs --tail=10 db
