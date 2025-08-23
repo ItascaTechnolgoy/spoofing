@@ -1,5 +1,4 @@
-# .github/workflows/deploy.yml
-# .github/workflows/deploy.yml
+# .github/workflows/deploy1.yml
 name: Deploy to VPS
 on:
   push:
@@ -8,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # Use your srv963397 runner
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -36,113 +35,43 @@ jobs:
           MYSQL_USER=${{ secrets.MYSQL_USER }}
           MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
           EOF
-          echo "✓ Environment file created"
 
-      - name: Stop existing containers gracefully
+      - name: Stop existing containers
         run: |
           cd /opt/your-app
-          if [ -f docker-compose.yml ] || [ -f compose.yml ]; then
-            echo "Stopping existing containers..."
-            docker compose down --remove-orphans || echo "No containers to stop"
-          else
-            echo "No compose file found, skipping container stop"
-          fi
+          docker compose down --remove-orphans || echo "No containers to stop"
 
-      - name: Verify Docker Compose file exists
+      - name: Build and start containers
         run: |
           cd /opt/your-app
-          if [ -f docker-compose.yml ]; then
-            echo "✓ Found docker-compose.yml"
-            echo "Contents:"
-            cat docker-compose.yml
-          elif [ -f compose.yml ]; then
-            echo "✓ Found compose.yml"
-            echo "Contents:"
-            cat compose.yml
-          else
-            echo "❌ No Docker Compose file found!"
-            echo "Files in directory:"
-            ls -la
-            exit 1
-          fi
-
-      - name: Build and start containers with detailed logging
-        run: |
-          cd /opt/your-app
-          echo "Building and starting containers..."
           docker compose up -d --build --force-recreate
-          echo "✓ Containers started"
 
-      - name: Wait for containers to be ready
+      - name: Wait for application to start
         run: |
-          echo "Waiting for containers to start..."
+          echo "Waiting for containers to be ready..."
           sleep 30
-          echo "Checking container status:"
-          docker compose ps
 
-      - name: Show detailed container information
+      - name: Verify deployment
         run: |
           cd /opt/your-app
           echo "=== Container Status ==="
-          docker compose ps -a
-          echo ""
-          echo "=== Running Docker Containers ==="
-          docker ps -a
-          echo ""
-          echo "=== Docker Networks ==="
-          docker network ls
+          docker compose ps
+          
+          echo "=== Testing Application ==="
+          curl -f http://localhost:8081/actuator/health && echo "✓ Health check passed" || echo "❌ Health check failed"
+          curl -f http://localhost:8081/ && echo "✓ Application accessible" || echo "❌ Application not accessible"
 
-      - name: Show container logs for debugging
-        if: always()  # Run even if previous steps fail
+      - name: Show logs for troubleshooting
+        if: failure()
         run: |
           cd /opt/your-app
-          echo "=== All Container Logs ==="
-          docker compose logs --tail=50
-          echo ""
-          echo "=== Individual Container Logs ==="
-          for container in $(docker compose ps -q); do
-            container_name=$(docker inspect --format='{{.Name}}' $container | sed 's/\///')
-            echo "--- Logs for $container_name ---"
-            docker logs --tail=20 $container
-            echo ""
-          done
-
-      - name: Test application connectivity
-        run: |
-          echo "Testing application connectivity..."
-          
-          # Test different ports that might be exposed
-          for port in 8080 8081 3000 80 443; do
-            echo "Testing port $port..."
-            if curl -f -m 10 http://localhost:$port/actuator/health 2>/dev/null; then
-              echo "✓ Health check successful on port $port"
-              break
-            elif curl -f -m 10 http://localhost:$port/ 2>/dev/null; then
-              echo "✓ Application responding on port $port"
-              break
-            else
-              echo "❌ No response on port $port"
-            fi
-          done
-          
-          # Show what's listening on ports
-          echo "Ports in use:"
-          ss -tlnp | grep -E ':(8080|8081|3000|80|443)' || echo "No services found on common ports"
+          echo "=== Server Logs ==="
+          docker compose logs --tail=20 server
+          echo "=== Database Logs ==="
+          docker compose logs --tail=10 db
 
       - name: Cleanup secrets
-        if: always()  # Always run cleanup
+        if: always()
         run: |
           cd /opt/your-app
           rm -f .env
-          echo "✓ Secrets cleaned up"
-
-      - name: Deployment summary
-        if: always()
-        run: |
-          echo "=== DEPLOYMENT SUMMARY ==="
-          echo "Timestamp: $(date)"
-          echo "Working directory: $(pwd)"
-          echo "Application directory: /opt/your-app"
-          echo "Docker Compose status:"
-          cd /opt/your-app
-          docker compose ps || echo "Could not get compose status"
