@@ -11,10 +11,10 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      VIRTUAL_HOST: dev-app.ps10.in
-      VIRTUAL_PORT: 8081
-      LETSENCRYPT_HOST: dev-app.ps10.in
-      LETSENCRYPT_EMAIL: support@ps10.in
+#      VIRTUAL_HOST: dev-app.ps10.in
+#      VIRTUAL_PORT: 8081
+#      LETSENCRYPT_HOST: dev-app.ps10.in
+#      LETSENCRYPT_EMAIL: support@ps10.in
     ports:
       - "8081:8081"
     depends_on:
