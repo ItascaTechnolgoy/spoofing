@@ -1,3 +1,3 @@
-# spoofing
-Python project for spoofing web browser
+# Spoofing
+Java Spring Boot project for browser profile management and spoofing
 

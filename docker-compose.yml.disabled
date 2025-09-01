@@ -1,0 +1,80 @@
+services:
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile-app
+    container_name: dev_app_server
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306  # Internal port for container-to-container communication
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    #      VIRTUAL_HOST: dev-app.ps10.in
+    #      VIRTUAL_PORT: 8081
+    #      LETSENCRYPT_HOST: dev-app.ps10.in
+    #      LETSENCRYPT_EMAIL: support@ps10.in
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal_network_spoofing
+      - external_network_nginx
+
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile-db
+    container_name: dev_app_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - spoofing_mysql_data:/var/lib/mysql
+    #    ports:
+    #      - "3308:3306"  # External port 3308 maps to internal port 3306
+    networks:
+      - internal_network_spoofing
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
+      interval: 30s
+      retries: 3
+    stop_grace_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    container_name: dev_app_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - spoofing_redis_data:/data
+    #    ports:
+    #      - "6379:6379"  # Uncomment if you need external access to Redis
+    networks:
+      - internal_network_spoofing
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  spoofing_mysql_data:
+    driver: local
+  spoofing_redis_data:
+    driver: local
+
+networks:
+  external_network_nginx:
+    external: true
+  internal_network_spoofing:  # This will be created automatically
+    driver: bridge

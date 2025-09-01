@@ -1,57 +1,26 @@
+version: '3.8'
+
 services:
-
-  server:
-    build:
-      context: .
-      dockerfile: Dockerfile-app
-    container_name: dev_app_server
+  mysql:
+    image: mysql:8.0
+    container_name: spoofing_mysql
     environment:
-      MYSQL_HOST: db
-      MYSQL_PORT: 3306  # Internal port for container-to-container communication
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-#      VIRTUAL_HOST: dev-app.ps10.in
-#      VIRTUAL_PORT: 8081
-#      LETSENCRYPT_HOST: dev-app.ps10.in
-#      LETSENCRYPT_EMAIL: support@ps10.in
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: spoofing_db
+      MYSQL_USER: spoofing_user
+      MYSQL_PASSWORD: spoofing_password
     ports:
-      - "8081:8081"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - internal_network_spoofing
-      - external_network_nginx
-
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfile-db
-    container_name: dev_app_db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      - "4306:3306"
     volumes:
-      - spoofing_mysql_data:/var/lib/mysql
-#    ports:
-#      - "3308:3306"  # External port 3308 maps to internal port 3306
-    networks:
-      - internal_network_spoofing
-    healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
-      interval: 30s
-      retries: 3
-    stop_grace_period: 60s
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: spoofing_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
 
 volumes:
-  spoofing_mysql_data:
-    driver: local
-
-networks:
-  external_network_nginx:
-    external: true
-  internal_network_spoofing:  # This will be created automatically
-    driver: bridge
+  mysql_data:
