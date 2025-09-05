@@ -18,4 +18,6 @@ public interface UserService {
     UserDto assignProfilesToUser(Long userId, Set<String> profileIds);
     List<GroupProfileDto> getAssignedProfiles(Long userId);
     List<GroupProfileDto> getUnassignedProfiles(Long userId);
+    List<GroupProfileDto> getCurrentUserAssignedProfiles();
+    List<com.itasca.spoofing.model.SingleProfileDto> getGroupMemberProfiles(String groupId);
 }

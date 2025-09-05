@@ -27,8 +27,8 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"urlGroups", "memberProfiles", "assignedUsers", "defaultForProfile"})
-@EqualsAndHashCode(exclude = {"urlGroups", "memberProfiles", "assignedUsers", "defaultForProfile"}, callSuper = true)
+@ToString(exclude = {"urlGroup", "memberProfiles", "assignedUsers", "defaultForProfile"})
+@EqualsAndHashCode(exclude = {"urlGroup", "memberProfiles", "assignedUsers", "defaultForProfile"}, callSuper = true)
 public class GroupProfileEntity extends BaseEntity {
 
     @Id
@@ -89,18 +89,17 @@ public class GroupProfileEntity extends BaseEntity {
     @Builder.Default
     private String language = "en-US,en;q=0.9";
 
-    // URL management (applies to all member profiles)
-    @OneToMany(
-            mappedBy = "groupProfile",
+    // URL group (single URL group per profile)
+    @OneToOne(
             cascade = CascadeType.ALL,
             fetch = FetchType.LAZY,
             orphanRemoval = true
     )
-    @Builder.Default
-    private List<URLGroupEntity> urlGroups = new ArrayList<>();
+    @JoinColumn(name = "url_group_id")
+    private URLGroupEntity urlGroup;
 
-    @Column(name = "default_url_group", length = 255)
-    private String defaultUrlGroup;
+    @Column(name = "url_group_id", insertable = false, updatable = false)
+    private Long urlGroupId;
 
     // Admin assigns groups to users
     @ManyToMany(mappedBy = "assignedGroups", fetch = FetchType.LAZY)
@@ -131,19 +130,13 @@ public class GroupProfileEntity extends BaseEntity {
     // Helper methods for managing relationships
 
     /**
-     * Add URL group to profile
+     * Set URL group for profile
      */
-    public void addUrlGroup(URLGroupEntity urlGroup) {
-        urlGroups.add(urlGroup);
-        urlGroup.setGroupProfile(this);
-    }
-
-    /**
-     * Remove URL group from profile
-     */
-    public void removeUrlGroup(URLGroupEntity urlGroup) {
-        urlGroups.remove(urlGroup);
-        urlGroup.setGroupProfile(null);
+    public void setUrlGroup(URLGroupEntity urlGroup) {
+        this.urlGroup = urlGroup;
+        if (urlGroup != null) {
+            this.urlGroupId = urlGroup.getId();
+        }
     }
 
     /**
@@ -219,13 +212,10 @@ public class GroupProfileEntity extends BaseEntity {
     }
 
     /**
-     * Get URL group by name
+     * Get URL group
      */
-    public URLGroupEntity getUrlGroupByName(String name) {
-        return urlGroups.stream()
-                .filter(group -> group.getName().equals(name))
-                .findFirst()
-                .orElse(null);
+    public URLGroupEntity getUrlGroup() {
+        return urlGroup;
     }
 
     /**

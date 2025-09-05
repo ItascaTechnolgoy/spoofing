@@ -120,4 +120,10 @@ public interface GroupProfileRepository extends JpaRepository<GroupProfileEntity
      * Find custom groups only
      */
     List<GroupProfileEntity> findByIsSystemGeneratedFalse();
+
+    /**
+     * Find group by ID with member profiles eagerly loaded
+     */
+    @Query("SELECT g FROM GroupProfileEntity g LEFT JOIN FETCH g.memberProfiles LEFT JOIN FETCH g.assignedUsers WHERE g.id = :id")
+    Optional<GroupProfileEntity> findByIdWithMembers(@Param("id") String id);
 }

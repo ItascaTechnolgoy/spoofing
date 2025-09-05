@@ -45,6 +45,9 @@ public class ProfileServiceImpl implements ProfileService {
 
     @Autowired
     private ProfileStatsService statsService;
+    
+    @Autowired
+    private URLGroupRepository urlGroupRepository;
 
     // ==================== SINGLE PROFILE OPERATIONS ====================
 
@@ -195,6 +198,9 @@ public class ProfileServiceImpl implements ProfileService {
         GroupProfileEntity entity = profileMapper.toEntity(profileDto);
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
+        
+        // Assign default URLGroup if none specified
+        assignUrlGroupToEntity(entity, profileDto.getUrlGroupId());
 
         GroupProfileEntity savedEntity = groupProfileRepository.save(entity);
 
@@ -210,7 +216,7 @@ public class ProfileServiceImpl implements ProfileService {
     public Optional<GroupProfileDto> getGroupProfile(String id) {
         log.debug("Retrieving group profile with ID: {}", id);
 
-        Optional<GroupProfileEntity> entity = groupProfileRepository.findById(id);
+        Optional<GroupProfileEntity> entity = groupProfileRepository.findByIdWithMembers(id);
         if (entity.isPresent()) {
             return Optional.of(profileMapper.toDto(entity.get()));
         }
@@ -252,11 +258,15 @@ public class ProfileServiceImpl implements ProfileService {
         updateGroupProfileEntity(existingEntity, profileDto);
         existingEntity.setUpdatedAt(LocalDateTime.now());
 
-        GroupProfileEntity updatedEntity = groupProfileRepository.save(existingEntity);
-        auditService.logProfileUpdate(updatedEntity.getId(), ProfileType.GROUP);
+        groupProfileRepository.save(existingEntity);
+        auditService.logProfileUpdate(existingEntity.getId(), ProfileType.GROUP);
+
+        // Fetch the complete updated entity with all relationships
+        GroupProfileEntity completeUpdatedEntity = groupProfileRepository.findByIdWithMembers(id)
+                .orElseThrow(() -> new ProfileNotFoundException("Group profile not found after update: " + id));
 
         log.info("Group profile updated successfully: {}", id);
-        return profileMapper.toDto(updatedEntity);
+        return profileMapper.toDto(completeUpdatedEntity);
     }
 
     @Override
@@ -430,7 +440,12 @@ public class ProfileServiceImpl implements ProfileService {
         entity.setDescription(dto.getDescription());
         entity.setStatus(dto.getStatus());
         entity.setSelectionMode(dto.getSelectionMode());
-        entity.setDefaultUrlGroup(dto.getDefaultUrlGroup());
+        entity.setProxyConfig(profileMapper.toEntity(dto.getProxyConfig()));
+        entity.setTimezone(dto.getTimezone());
+        entity.setLanguage(dto.getLanguage());
+        
+        // Assign URLGroup or default
+        assignUrlGroupToEntity(entity, dto.getUrlGroupId());
         
         // Update member profiles
         if (dto.getMemberProfileIds() != null) {
@@ -439,6 +454,25 @@ public class ProfileServiceImpl implements ProfileService {
                 singleProfileRepository.findById(profileId).ifPresent(profile -> 
                     entity.getMemberProfiles().add(profile)
                 );
+            }
+        }
+    }
+    
+    private void assignUrlGroupToEntity(GroupProfileEntity entity, Long urlGroupId) {
+        if (urlGroupId != null) {
+            groupProfileRepository.findById(entity.getId()).ifPresent(existingEntity -> {
+                URLGroupEntity urlGroup = urlGroupRepository.findById(urlGroupId).orElse(null);
+                if (urlGroup != null) {
+                    entity.setUrlGroup(urlGroup);
+                    entity.setUrlGroupId(urlGroupId);
+                }
+            });
+        } else {
+            // Assign default URLGroup
+            URLGroupEntity defaultUrlGroup = urlGroupRepository.findByName("Default");
+            if (defaultUrlGroup != null) {
+                entity.setUrlGroup(defaultUrlGroup);
+                entity.setUrlGroupId(defaultUrlGroup.getId());
             }
         }
     }

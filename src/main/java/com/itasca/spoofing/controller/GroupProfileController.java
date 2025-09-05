@@ -45,7 +45,7 @@ public class GroupProfileController {
                 .description((String) payload.getOrDefault("description", ""))
                 .selectionMode((String) payload.getOrDefault("selection_mode", "sequential"))
                 .currentProfileIndex((Integer) payload.getOrDefault("current_profile_index", 0))
-                .defaultUrlGroup((String) payload.get("default_url_group"))
+                .urlGroupId(payload.get("url_group_id") != null ? Long.valueOf(payload.get("url_group_id").toString()) : null)
                 .status((String) payload.getOrDefault("status", "Active"))
                 .timezone((String) payload.getOrDefault("timezone", "America/New_York"))
                 .language((String) payload.getOrDefault("language", "en-US,en;q=0.9"))
@@ -56,13 +56,16 @@ public class GroupProfileController {
             // Handle proxy config if provided
             Map<String, Object> proxyConfigData = (Map<String, Object>) payload.get("proxy_config");
             if (proxyConfigData != null) {
+                Integer endPort = (Integer) proxyConfigData.get("port_end");
+                
                 ProxyConfig proxyConfig = ProxyConfig.builder()
                     .proxyType((String) proxyConfigData.getOrDefault("proxy_type", "None"))
                     .host((String) proxyConfigData.getOrDefault("host", ""))
                     .port((Integer) proxyConfigData.getOrDefault("port", 8080))
-                    .endPort((Integer) proxyConfigData.get("end_port"))
+                    .endPort(endPort)
                     .username((String) proxyConfigData.getOrDefault("username", ""))
                     .password((String) proxyConfigData.getOrDefault("password", ""))
+                    .ipType(proxyConfigData.get("ip_type") != null ? IPType.fromValue((String) proxyConfigData.get("ip_type")) : null)
                     .fixedIp((String) proxyConfigData.get("fixed_ip"))
                     .country((String) proxyConfigData.getOrDefault("country", "US"))
                     .build();
@@ -117,7 +120,7 @@ public class GroupProfileController {
                 .name((String) payload.get("name"))
                 .description((String) payload.getOrDefault("description", ""))
                 .selectionMode((String) payload.getOrDefault("selection_mode", "sequential"))
-                .defaultUrlGroup((String) payload.get("default_url_group"))
+                .urlGroupId(payload.get("url_group_id") != null ? Long.valueOf(payload.get("url_group_id").toString()) : null)
                 .timezone((String) payload.getOrDefault("timezone", "America/New_York"))
                 .language((String) payload.getOrDefault("language", "en-US,en;q=0.9"))
                 .status((String) payload.getOrDefault("status", "Active"))
@@ -126,13 +129,16 @@ public class GroupProfileController {
             // Handle proxy config if provided
             Map<String, Object> proxyConfigData = (Map<String, Object>) payload.get("proxy_config");
             if (proxyConfigData != null) {
+                Integer endPort = (Integer) proxyConfigData.get("port_end");
+                
                 ProxyConfig proxyConfig = ProxyConfig.builder()
                     .proxyType((String) proxyConfigData.getOrDefault("proxy_type", "None"))
                     .host((String) proxyConfigData.getOrDefault("host", ""))
                     .port((Integer) proxyConfigData.getOrDefault("port", 8080))
-                    .endPort((Integer) proxyConfigData.get("end_port"))
+                    .endPort(endPort)
                     .username((String) proxyConfigData.getOrDefault("username", ""))
                     .password((String) proxyConfigData.getOrDefault("password", ""))
+                    .ipType(proxyConfigData.get("ip_type") != null ? IPType.fromValue((String) proxyConfigData.get("ip_type")) : null)
                     .fixedIp((String) proxyConfigData.get("fixed_ip"))
                     .country((String) proxyConfigData.getOrDefault("country", "US"))
                     .build();

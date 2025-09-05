@@ -16,12 +16,14 @@ import java.util.ArrayList;
 @EqualsAndHashCode
 public class URLGroupDto {
 
+    private Long id;
+
     @NotBlank(message = "URL group name is required")
     private String name;
 
     @NotNull(message = "URLs list cannot be null")
     @Builder.Default
-    private List<String> urls = new ArrayList<>();
+    private List<URLDto> urls = new ArrayList<>();
 
     @JsonProperty("current_index")
     @Builder.Default
@@ -38,7 +40,7 @@ public class URLGroupDto {
      */
     public String getNextUrl() {
         if (currentIndex < urls.size()) {
-            String url = urls.get(currentIndex);
+            String url = urls.get(currentIndex).getUrl();
             currentIndex++;
             completedUrls.add(url);
             return url;
@@ -64,24 +66,32 @@ public class URLGroupDto {
     /**
      * Get remaining URLs for manual selection
      */
-    public List<String> getAvailableUrls() {
+    public List<String> getRemainingUrls() {
         if (currentIndex >= urls.size()) {
             return new ArrayList<>();
         }
-        return urls.subList(currentIndex, urls.size());
+        return urls.subList(currentIndex, urls.size()).stream()
+                .map(URLDto::getUrl)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**
      * Manually select a specific URL
      */
     public boolean selectUrlManually(String url) {
-        List<String> availableUrls = getAvailableUrls();
-        if (availableUrls.contains(url)) {
-            int urlIndex = urls.indexOf(url);
+        List<String> remainingUrls = getRemainingUrls();
+        if (remainingUrls.contains(url)) {
+            int urlIndex = -1;
+            for (int i = 0; i < urls.size(); i++) {
+                if (urls.get(i).getUrl().equals(url)) {
+                    urlIndex = i;
+                    break;
+                }
+            }
             if (urlIndex >= currentIndex) {
                 // Swap the selected URL to current position
-                String temp = urls.get(currentIndex);
-                urls.set(currentIndex, url);
+                URLDto temp = urls.get(currentIndex);
+                urls.set(currentIndex, urls.get(urlIndex));
                 urls.set(urlIndex, temp);
 
                 currentIndex++;

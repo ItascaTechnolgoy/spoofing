@@ -4,6 +4,9 @@ package com.itasca.spoofing.mapper;
 import com.itasca.spoofing.model.*;
 import com.itasca.spoofing.entity.*;
 import com.itasca.spoofing.repository.SingleProfileRepository;
+import com.itasca.spoofing.repository.URLGroupRepository;
+import com.itasca.spoofing.repository.UserRepository;
+import com.itasca.spoofing.repository.URLRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +20,15 @@ public class ProfileMapper {
 
     @Autowired
     private SingleProfileRepository singleProfileRepository;
+    
+    @Autowired
+    private URLGroupRepository urlGroupRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private URLRepository urlRepository;
 
     // SingleProfile mappings
 
@@ -108,13 +120,19 @@ public class ProfileMapper {
                 .memberProfileIds(entity.getMemberProfiles().stream()
                         .map(SingleProfileEntity::getId)
                         .collect(Collectors.toSet()))
+                .memberProfiles(entity.getMemberProfiles().stream()
+                        .map(this::toDto)
+                        .collect(Collectors.toCollection(HashSet::new)))
+                .assignedUserIds(entity.getAssignedUsers().stream()
+                        .map(UserEntity::getId)
+                        .collect(Collectors.toSet()))
                 .selectionMode(entity.getSelectionMode())
                 .currentProfileIndex(entity.getCurrentProfileIndex())
                 .proxyConfig(toDto(entity.getProxyConfig()))
                 .timezone(entity.getTimezone())
                 .language(entity.getLanguage())
-                .urlGroups(entity.getUrlGroups().stream().map(this::toDto).collect(Collectors.toList()))
-                .defaultUrlGroup(entity.getDefaultUrlGroup())
+                .urlGroupId(entity.getUrlGroupId())
+                .urlGroup(entity.getUrlGroup() != null ? toDto(entity.getUrlGroup()) : null)
                 .status(entity.getStatus())
                 .created(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null)
                 .lastUsed(entity.getLastUsed())
@@ -136,7 +154,7 @@ public class ProfileMapper {
                 .proxyConfig(toEntity(dto.getProxyConfig()))
                 .timezone(dto.getTimezone())
                 .language(dto.getLanguage())
-                .defaultUrlGroup(dto.getDefaultUrlGroup())
+                .urlGroupId(dto.getUrlGroupId())
                 .status(dto.getStatus())
                 .lastUsed(dto.getLastUsed())
                 .build();
@@ -149,14 +167,20 @@ public class ProfileMapper {
             }
             entity.setMemberProfiles(memberProfiles);
         }
+        
+        // Map assigned users
+        if (dto.getAssignedUserIds() != null && !dto.getAssignedUserIds().isEmpty()) {
+            Set<UserEntity> assignedUsers = new HashSet<>();
+            for (Long userId : dto.getAssignedUserIds()) {
+                userRepository.findById(userId).ifPresent(assignedUsers::add);
+            }
+            entity.setAssignedUsers(assignedUsers);
+        }
 
-        // Map URL groups
-        if (dto.getUrlGroups() != null) {
-            List<URLGroupEntity> urlGroups = dto.getUrlGroups().stream()
-                    .map(this::toEntity)
-                    .collect(Collectors.toList());
-            urlGroups.forEach(group -> group.setGroupProfile(entity));
-            entity.setUrlGroups(urlGroups);
+        // Map URL group by ID
+        if (dto.getUrlGroupId() != null) {
+            urlGroupRepository.findById(dto.getUrlGroupId())
+                    .ifPresent(entity::setUrlGroup);
         }
 
         return entity;
@@ -169,11 +193,30 @@ public class ProfileMapper {
             return null;
         }
 
+        // Convert URL strings to URLDto objects with proper IDs
+        List<URLDto> urlDtos = entity.getUrls().stream()
+                .map(urlString -> {
+                    URLEntity urlEntity = urlRepository.findByUrl(urlString);
+                    if (urlEntity != null) {
+                        return URLDto.builder()
+                                .id(urlEntity.getId())
+                                .url(urlEntity.getUrl())
+                                .name(urlEntity.getName())
+                                .description(urlEntity.getDescription())
+                                .build();
+                    } else {
+                        return URLDto.builder()
+                                .url(urlString)
+                                .name(urlString)
+                                .build();
+                    }
+                })
+                .collect(Collectors.toList());
+
         return URLGroupDto.builder()
+                .id(entity.getId())
                 .name(entity.getName())
-                .urls(entity.getUrls())
-//                .currentIndex(entity.getCurrentIndex())
-//                .completedUrls(entity.getCompletedUrls())
+                .urls(urlDtos)
                 .build();
     }
 
@@ -182,11 +225,13 @@ public class ProfileMapper {
             return null;
         }
 
+        List<String> urlStrings = dto.getUrls().stream()
+                .map(URLDto::getUrl)
+                .collect(Collectors.toList());
+
         return URLGroupEntity.builder()
                 .name(dto.getName())
-                .urls(dto.getUrls())
-//                .currentIndex(dto.getCurrentIndex())
-//                .completedUrls(dto.getCompletedUrls())
+                .urls(urlStrings)
                 .build();
     }
 
@@ -201,6 +246,7 @@ public class ProfileMapper {
                 .proxyType(entity.getProxyType())
                 .host(entity.getHost())
                 .port(entity.getPort())
+                .endPort(entity.getEndPort())
                 .username(entity.getUsername())
                 .password(entity.getPassword())
                 .ipType(entity.getIpType())
@@ -218,6 +264,7 @@ public class ProfileMapper {
                 .proxyType(dto.getProxyType())
                 .host(dto.getHost())
                 .port(dto.getPort())
+                .endPort(dto.getEndPort())
                 .username(dto.getUsername())
                 .password(dto.getPassword())
                 .ipType(dto.getIpType())

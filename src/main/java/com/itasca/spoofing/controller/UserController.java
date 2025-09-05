@@ -188,4 +188,16 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/assigned-profiles")
+    @Operation(summary = "Get assigned profiles for current user", description = "Retrieves group profiles assigned to the currently logged-in user")
+    public ResponseEntity<?> getCurrentUserAssignedProfiles() {
+        try {
+            java.util.List<com.itasca.spoofing.model.GroupProfileDto> assignedProfiles = userService.getCurrentUserAssignedProfiles();
+            return ResponseEntity.ok(assignedProfiles);
+        } catch (Exception e) {
+            log.error("Error retrieving assigned profiles for current user: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

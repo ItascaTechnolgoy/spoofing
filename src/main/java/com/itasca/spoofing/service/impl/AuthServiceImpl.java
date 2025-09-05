@@ -81,8 +81,8 @@ public class AuthServiceImpl implements AuthService {
                 "user", Map.of(
                         "id", user.getId(),
                         "email", user.getEmail(),
-                        "firstName", user.getFirstName(),
-                        "lastName", user.getLastName(),
+                        "firstName", user.getFirstName() != null ? user.getFirstName() : "",
+                        "lastName", user.getLastName() != null ? user.getLastName() : "",
                         "roles", roles,
                         "status", user.getStatus()
                 )
@@ -118,8 +118,8 @@ public class AuthServiceImpl implements AuthService {
                     "user", Map.of(
                             "id", user.getId(),
                             "email", user.getEmail(),
-                            "firstName", user.getFirstName(),
-                            "lastName", user.getLastName(),
+                            "firstName", user.getFirstName() != null ? user.getFirstName() : "",
+                            "lastName", user.getLastName() != null ? user.getLastName() : "",
                             "roles", roles,
                             "status", user.getStatus()
                     ),

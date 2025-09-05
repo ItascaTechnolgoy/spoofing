@@ -80,14 +80,13 @@ public class GroupProfileDto {
     @Builder.Default
     private String language = "en-US,en;q=0.9";
 
-    // URL management (applies to all member profiles)
-    @JsonProperty("url_groups")
+    // URL group (single URL group per profile)
+    @JsonProperty("url_group")
     @Valid
-    @Builder.Default
-    private List<URLGroupDto> urlGroups = new ArrayList<>();
+    private URLGroupDto urlGroup;
 
-    @JsonProperty("default_url_group")
-    private String defaultUrlGroup;
+    @JsonProperty("url_group_id")
+    private Long urlGroupId;
 
     // User assignments
     @JsonProperty("assigned_user_ids")

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,9 @@ public class UserServiceImpl implements UserService {
     
     @Autowired
     private com.itasca.spoofing.repository.GroupProfileRepository groupProfileRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,7 +51,7 @@ public class UserServiceImpl implements UserService {
         UserEntity entity = UserEntity.builder()
                 .username(userDto.getUsername())
                 .email(userDto.getEmail())
-                .password(userDto.getPassword())
+                .password(passwordEncoder.encode(userDto.getPassword()))
                 .firstName(userDto.getFirstName())
                 .lastName(userDto.getLastName())
                 .status(userDto.getStatus())
@@ -113,6 +117,33 @@ public class UserServiceImpl implements UserService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    @Override
+    public java.util.List<com.itasca.spoofing.model.GroupProfileDto> getCurrentUserAssignedProfiles() {
+        org.springframework.security.core.Authentication authentication = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        UserEntity user = userRepository.findByEmail(email).orElseThrow();
+        return user.getAssignedGroups().stream()
+                .map(this::convertGroupToDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public java.util.List<com.itasca.spoofing.model.SingleProfileDto> getGroupMemberProfiles(String groupId) {
+        com.itasca.spoofing.entity.GroupProfileEntity group = groupProfileRepository.findById(groupId).orElseThrow();
+        return group.getMemberProfiles().stream()
+                .map(this::convertSingleProfileToDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private com.itasca.spoofing.model.SingleProfileDto convertSingleProfileToDto(com.itasca.spoofing.entity.SingleProfileEntity entity) {
+        return com.itasca.spoofing.model.SingleProfileDto.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .status(entity.getStatus())
+                .build();
+    }
+
     private UserDto convertToDto(UserEntity entity) {
         Set<String> assignedGroupIds = entity.getAssignedGroups().stream()
                 .map(group -> group.getId())
@@ -134,6 +165,10 @@ public class UserServiceImpl implements UserService {
     }
 
     private com.itasca.spoofing.model.GroupProfileDto convertGroupToDto(com.itasca.spoofing.entity.GroupProfileEntity entity) {
+        Set<String> memberProfileIds = entity.getMemberProfiles().stream()
+                .map(com.itasca.spoofing.entity.SingleProfileEntity::getId)
+                .collect(java.util.stream.Collectors.toSet());
+                
         return com.itasca.spoofing.model.GroupProfileDto.builder()
                 .id(entity.getId())
                 .name(entity.getName())
@@ -143,6 +178,8 @@ public class UserServiceImpl implements UserService {
                 .isSystemGenerated(entity.getIsSystemGenerated())
                 .selectionMode(entity.getSelectionMode())
                 .currentProfileIndex(entity.getCurrentProfileIndex())
+                .memberProfileIds(memberProfileIds)
+                .urlGroupId(entity.getUrlGroupId())
                 .timezone(entity.getTimezone())
                 .language(entity.getLanguage())
                 .status(entity.getStatus())

@@ -87,19 +87,16 @@ public class GroupManagementServiceImpl implements GroupManagementService {
                 .selectionMode(groupDto.getSelectionMode())
                 .currentProfileIndex(0)
                 .memberProfiles(memberProfiles)
-                .defaultUrlGroup(groupDto.getDefaultUrlGroup())
+                .urlGroupId(groupDto.getUrlGroupId())
                 .status(groupDto.getStatus())
                 .maxConcurrentUsage(groupDto.getMaxConcurrentUsage())
                 .currentActiveSessions(0)
                 .build();
 
-        // Add URL groups if any
-        if (groupDto.getUrlGroups() != null) {
-            List<URLGroupEntity> urlGroups = groupDto.getUrlGroups().stream()
-                    .map(profileMapper::toEntity)
-                    .collect(Collectors.toList());
-            urlGroups.forEach(urlGroup -> urlGroup.setGroupProfile(entity));
-            entity.setUrlGroups(urlGroups);
+        // Add URL group if any
+        if (groupDto.getUrlGroup() != null) {
+            URLGroupEntity urlGroup = profileMapper.toEntity(groupDto.getUrlGroup());
+            entity.setUrlGroup(urlGroup);
         }
 
         entity.setCreatedAt(LocalDateTime.now());
