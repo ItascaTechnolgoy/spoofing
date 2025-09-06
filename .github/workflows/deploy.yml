@@ -9,24 +9,19 @@ jobs:
     runs-on: self-hosted
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Create environment file
+    - name: Checkout and deploy
       run: |
+        cd /opt/spoofing || mkdir -p /opt/spoofing && cd /opt/spoofing
+        if [ -d ".git" ]; then
+          git pull origin main
+        else
+          git clone ${{ github.server_url }}/${{ github.repository }}.git .
+        fi
         cat > .env << EOF
         MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
         MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
         MYSQL_USER=${{ secrets.MYSQL_USER }}
         MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
         EOF
-    
-    - name: Deploy application
-      run: |
         docker-compose -f docker-compose.prod.yml down
         docker-compose -f docker-compose.prod.yml up -d --build
-    
-    - name: Cleanup
-      if: always()
-      run: |
-        cd ..
-        rm -rf ${{ github.workspace }}
