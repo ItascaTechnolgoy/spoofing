@@ -32,3 +32,31 @@ jobs:
         docker compose -f docker-compose.prod.yml down --remove-orphans
         docker container rm -f spoofing_mysql spoofing_redis spoofing_app 2>/dev/null || true
         docker compose -f docker-compose.prod.yml up -d --build
+    
+    - name: Wait for services
+      run: |
+        echo "Waiting for services to start..."
+        sleep 30
+    
+    - name: Check container status
+      run: |
+        cd $HOME/spoofing
+        echo "=== Container Status ==="
+        docker compose -f docker-compose.prod.yml ps
+        echo "\n=== Docker Containers ==="
+        docker ps -a --filter name=spoofing
+    
+    - name: Check application logs
+      run: |
+        cd $HOME/spoofing
+        echo "=== Application Logs (Last 50 lines) ==="
+        docker compose -f docker-compose.prod.yml logs --tail=50 app
+        echo "\n=== MySQL Logs (Last 20 lines) ==="
+        docker compose -f docker-compose.prod.yml logs --tail=20 mysql
+    
+    - name: Health check
+      run: |
+        echo "=== Health Check ==="
+        curl -f http://localhost:8081/api/test/health || echo "Health check failed"
+        echo "\n=== Port Check ==="
+        netstat -tlnp | grep :8081 || echo "Port 8081 not listening"
