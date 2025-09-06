@@ -29,5 +29,6 @@ jobs:
     - name: Deploy application
       run: |
         cd $HOME/spoofing
-        docker compose -f docker-compose.prod.yml down
+        docker compose -f docker-compose.prod.yml down --remove-orphans
+        docker container rm -f spoofing_mysql spoofing_redis spoofing_app 2>/dev/null || true
         docker compose -f docker-compose.prod.yml up -d --build
