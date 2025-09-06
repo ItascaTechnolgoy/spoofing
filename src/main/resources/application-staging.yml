@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/spoofing_db}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:4306/spoofing_db}
     username: ${SPRING_DATASOURCE_USERNAME:spoofing_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    password: ${SPRING_DATASOURCE_PASSWORD:spoofing_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
@@ -32,3 +32,8 @@ server:
 jwt:
   secret: myVerySecretKeyForJWTTokenGenerationThatShouldBeLongEnough
   expiration: 86400000
+
+logging:
+  level:
+    com.itasca.spoofing: INFO
+    org.springframework.security: WARN

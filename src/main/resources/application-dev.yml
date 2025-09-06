@@ -1,30 +1,30 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/spoofing_db}
-    username: ${SPRING_DATASOURCE_USERNAME:spoofing_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    url: jdbc:mysql://localhost:4306/spoofing_db
+    username: spoofing_user
+    password: spoofing_password
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
-        format_sql: false
+        format_sql: true
   
   data:
     redis:
-      host: ${SPRING_REDIS_HOST:localhost}
-      port: ${SPRING_REDIS_PORT:6379}
+      host: localhost
+      port: 6379
   
   cache:
     type: redis
   
   docker:
     compose:
-      enabled: false
+      enabled: true
 
 server:
   port: 8081
@@ -32,3 +32,8 @@ server:
 jwt:
   secret: myVerySecretKeyForJWTTokenGenerationThatShouldBeLongEnough
   expiration: 86400000
+
+logging:
+  level:
+    com.itasca.spoofing: DEBUG
+    org.springframework.security: DEBUG
