@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile-staging
+    container_name: spoofing_app_staging
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=staging
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/spoofing_db
+      - SPRING_DATASOURCE_USERNAME=spoofing_user
+      - SPRING_DATASOURCE_PASSWORD=spoofing_password
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: spoofing_mysql_staging
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: spoofing_db
+      MYSQL_USER: spoofing_user
+      MYSQL_PASSWORD: spoofing_password
+    ports:
+      - "4306:3306"
+    volumes:
+      - mysql_staging_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: spoofing_redis_staging
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  mysql_staging_data:

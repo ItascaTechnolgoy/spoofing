@@ -1,77 +1,32 @@
-# .github/workflows/deploy1.yml
-name: Deploy to VPS
+name: Deploy to Production
+
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: self-hosted
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create application directory
-        run: |
-          sudo mkdir -p /opt/your-app
-          sudo chown $USER:$USER /opt/your-app
-
-      - name: Copy application files
-        run: |
-          rsync -av --delete --exclude='.git' . /opt/your-app/
-
-      - name: Create external Docker network
-        run: |
-          docker network create external_network_nginx || echo "Network already exists"
-
-      - name: Create .env file with secrets
-        run: |
-          cd /opt/your-app
-          cat > .env << EOF
-          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
-          MYSQL_USER=${{ secrets.MYSQL_USER }}
-          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
-          EOF
-
-      - name: Stop existing containers
-        run: |
-          cd /opt/your-app
-          docker compose down --remove-orphans || echo "No containers to stop"
-
-      - name: Build and start containers
-        run: |
-          cd /opt/your-app
-          docker compose up -d --build --force-recreate
-
-      - name: Wait for application to start
-        run: |
-          echo "Waiting for containers to be ready..."
-          sleep 30
-
-      - name: Verify deployment
-        run: |
-          cd /opt/your-app
-          echo "=== Container Status ==="
-          docker compose ps
-          
-          echo "=== Testing Application ==="
-          curl -f http://localhost:8081/actuator/health && echo "✓ Health check passed" || echo "❌ Health check failed"
-          curl -f http://localhost:8081/ && echo "✓ Application accessible" || echo "❌ Application not accessible"
-
-      - name: Show logs for troubleshooting
-        if: failure()
-        run: |
-          cd /opt/your-app
-          echo "=== Server Logs ==="
-          docker compose logs --tail=20 server
-          echo "=== Database Logs ==="
-          docker compose logs --tail=10 db
-
-      - name: Cleanup secrets
-        if: always()
-        run: |
-          cd /opt/your-app
-          rm -f .env
+    - uses: actions/checkout@v3
+    
+    - name: Create environment file
+      run: |
+        cat > .env << EOF
+        MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+        MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+        MYSQL_USER=${{ secrets.MYSQL_USER }}
+        MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+        EOF
+    
+    - name: Deploy application
+      run: |
+        docker-compose -f docker-compose.prod.yml down
+        docker-compose -f docker-compose.prod.yml up -d --build
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        cd ..
+        rm -rf ${{ github.workspace }}
